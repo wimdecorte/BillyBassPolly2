@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doc>
+  <assembly>
+    <name>BillyBassPolly2</name>
+  </assembly>
+  <members>
+    <member name="" />
+    <member name="N:BillyBassPolly2" />
+    <member name="M:BillyBassPolly2.StartupTask.PlayAudioThroughMediaPlayer(StorageFile)" />
+  </members>
+</doc>

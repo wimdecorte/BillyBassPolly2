@@ -102,6 +102,7 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
+    <PRIResource Include="Config.resw" />
     <None Include="BillyBassPolly2_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
@@ -129,8 +130,14 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AdafruitClassLibrary">
+      <Version>1.0.7.1</Version>
+    </PackageReference>
+    <PackageReference Include="FMdotNet__DataAPI">
+      <Version>2.0.1</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>6.0.7</Version>
+      <Version>6.1.5</Version>
     </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '15.0' ">
