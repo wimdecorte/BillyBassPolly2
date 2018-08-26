@@ -130,15 +130,18 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AdafruitClassLibrary">
-      <Version>1.0.7.1</Version>
-    </PackageReference>
     <PackageReference Include="FMdotNet__DataAPI">
       <Version>2.0.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.1.5</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AdafruitClassLibrary, Version=1.0.7.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\AdafruitClassLibrary\AdafruitClassLibrary\bin\Release\AdafruitClassLibrary.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '15.0' ">
     <VisualStudioVersion>15.0</VisualStudioVersion>

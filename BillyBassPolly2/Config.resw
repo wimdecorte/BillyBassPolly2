@@ -138,7 +138,7 @@
     <comment>in milliseconds, when not in testing mode</comment>
   </data>
   <data name="polling_interval_testing" xml:space="preserve">
-    <value>5</value>
+    <value>3</value>
     <comment>in seconds, when testing = true</comment>
   </data>
   <data name="testing" xml:space="preserve">

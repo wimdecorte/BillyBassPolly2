@@ -142,10 +142,6 @@ namespace BillyBassPolly2
                 // query FM to see if there are any outstanding tasks
                 var find = fmserver.FindRequest();
 
-                // we only need one at most
-                //find.SetStartRecord(1);
-                //find.SetHowManyRecords(1);
-
                 var request1 = find.SearchCriterium();
                 request1.AddFieldSearch("flag_ready", "1");
 
@@ -168,69 +164,40 @@ namespace BillyBassPolly2
                 uint speed = Convert.ToUInt16(record.fieldsAndData.Where(pair => pair.Key == "motor_speed").Select(pair => pair.Value).First());
                 int motor_number = Convert.ToInt16(record.fieldsAndData.Where(pair => pair.Key == "motor_number").Select(pair => pair.Value).First());
                 int how_long = Convert.ToInt16(record.fieldsAndData.Where(pair => pair.Key == "duration").Select(pair => pair.Value).First());
+                uint pwm_frequency = Convert.ToUInt16(record.fieldsAndData.Where(pair => pair.Key == "motor_PWM_frequency").Select(pair => pair.Value).First());
 
-                /* not needed when we are just testing motors
-                // download the audio file
-                string url = record.fieldsAndData.Where(pair => pair.Key == "audio_file").Select(pair => pair.Value).First();
-                StorageFolder folder = ApplicationData.Current.LocalFolder;
-                fmserver.SetDownloadFolder(folder.Path + @"\");
-
-                FileInfo audioFile;
-                string fmsMessage = string.Empty;
-                try
-                {
-                    audioFile = await fmserver.DownloadFileFromContainerField(url, "play.mp3");
-                    fmsMessage = fmserver.lastErrorMessage;
-                    lc.LogMessage("audio file downloaded: " + audioFile.FullName, LoggingLevel.Information);
-                }
-                catch (Exception ex)
-                {
-                    lc.LogMessage("audio file not  downloaded.", LoggingLevel.Error);
-                    // unflag the FM record and write the exception to notes
-                    var req = fmserver.EditRequest(taskId);
-                    req.AddField("flag_completed_when", DateTime.Now.ToString());
-                    req.AddField("flag_ready", "");
-                    req.AddField("notes", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " - error! " + ex.InnerException.Message + Environment.NewLine + notes);
-                    // execute the request
-                    var resp = await req.Execute();
-                    return;
-                }
-
-                if (audioFile != null)
-                {
-                    try
-                    {
-                        lc.LogMessage("before playing audio file: " + audioFile.FullName, LoggingLevel.Information);
-                        // play the audio
-                        StorageFile file = await StorageFile.GetFileFromPathAsync(audioFile.FullName);
-
-                        await PlayAudioThroughMediaPlayer(file);
-                        //Thread.Sleep(2000);
-                        GC.Collect();
-
-                        // delete the file
-                        lc.LogMessage("before deleting audio file.", LoggingLevel.Information);
-                        try
-                        {
-                            await file.DeleteAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            lc.LogMessage("Could not delete audio file: " + ex.InnerException, LoggingLevel.Error);
-                        }
-                        lc.LogMessage("after deleting audio file.", LoggingLevel.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        fmsMessage = ex.InnerException.Message;
-                    }
-                }
-                */
 
                 string note = "";
 
                 // hook into the mother hat
-                MotorHat mh = new MotorHat();
+                // this part is not very reliable in the Adafruit library it errors out on every 2nd iteration
+                // so we are going to loop until no exception
+                MotorHat mh = null;
+
+                int tryCount = 0;
+                while (tryCount < 5)
+                {
+                    try
+                    {
+                        mh = new MotorHat();
+                        await mh.InitAsync(pwm_frequency).ConfigureAwait(false);
+                        lc.LogMessage("hat - initialized with PWM frequency of: " + pwm_frequency.ToString(), LoggingLevel.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        tryCount++;
+                        note = "init error #" + tryCount +":" + ex.Message + " - " + ex.InnerException;
+                        lc.LogMessage("Error: " + note, LoggingLevel.Error);
+
+                        // wait a little bit
+                        Thread.Sleep(10);
+                        // next loop iteration
+                        continue;
+                    }
+                    // all is well
+                    break;
+                }
+                
 
                 // hook into the DC motor as specified
                 try
@@ -258,21 +225,6 @@ namespace BillyBassPolly2
                 // write an update to FMS
                 var editRequest = fmserver.EditRequest(taskId);
                 editRequest.AddField("flag_ready", "");
-
-                /*
-                if (audioFile == null)
-                {
-                    editRequest.AddField("notes", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " - error! No file was downloaed" + Environment.NewLine + notes);
-                }
-                else if (fmsMessage != "OK")
-                {
-                    editRequest.AddField("notes", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " - error! Could not play the audio" + Environment.NewLine + notes);
-                }
-                else
-                {
-                    editRequest.AddField("notes", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " - Done!" + Environment.NewLine + notes);
-                }
-                */
 
                 editRequest.AddField("notes", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " - Done! " + Environment.NewLine + note + Environment.NewLine + notes);
 
@@ -302,35 +254,6 @@ namespace BillyBassPolly2
                     lc.LogMessage("Logging out of FMS.", LoggingLevel.Information);
                 }
             }
-        }
-
-
-        private async Task PlayAudioThroughMediaPlayer(StorageFile file)
-        {
-            // uses the normal MediaPlayer but due to Raspberry firmware issues, there is a loud
-            // pop at the start and end of the audio
-
-            // works ok if you use a USB adapter for the 3.5mm output plug (headphone jack)
-
-            MediaPlayer billy = new MediaPlayer();
-            billy.AutoPlay = false;
-
-            MediaSource source = MediaSource.CreateFromStorageFile(file);
-            source.OpenOperationCompleted += MediaSource_OpenOperationCompleted;
-            await source.OpenAsync();
-
-            billy.Source = source;
-            billy.Play();
-            Thread.Sleep((Convert.ToInt32(source.Duration.GetValueOrDefault().TotalSeconds)) * 1000 + 500);
-            lc.LogMessage("after playing audio file.", LoggingLevel.Information);
-            source.Dispose();
-            billy.Dispose();
-        }
-
-        private void MediaSource_OpenOperationCompleted(MediaSource sender, MediaSourceOpenOperationCompletedEventArgs args)
-        {
-            TimeSpan duration = sender.Duration.GetValueOrDefault();
-            lc.LogMessage("Finished loading the audio file, duration = " + duration.TotalSeconds + " seconds", LoggingLevel.Information);
         }
     }
 }
